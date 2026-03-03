@@ -47,11 +47,10 @@ Every command supports --json for structured agent output.
 ## Agent Integration
 
 CLI (zero config): cairn init generates AGENTS.md that Claude Code and Cursor read.
-MCP Server: pip install fastmcp, then see cairn_mcp.py for setup instructions.
 
 ## Design Principles
 
-- Zero dependencies (stdlib only; MCP server optionally needs fastmcp)
+- Zero dependencies (stdlib only)
 - One JSON file per task (clean git diffs, no merge conflicts)
 - No daemon (every command reads/writes/exits)
 - Hash-based IDs (no collisions across branches)

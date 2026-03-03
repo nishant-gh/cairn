@@ -22,7 +22,8 @@ import argparse
 import json
 import sys
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime
+from datetime import timezone
 from pathlib import Path
 
 __version__ = "0.1.0"
@@ -180,9 +181,7 @@ def format_task_row(t):
     p = "P" + str(t["priority"])
     bl = " blocks:" + ",".join(t["blocks"]) if t.get("blocks") else ""
     pa = " ^" + t["parent"] if t.get("parent") else ""
-    return "  {} {}  {}  [{:6s}]  {}{}{}".format(
-        icon, t["id"], p, t["status"], t["title"], bl, pa
-    )
+    return "  {} {}  {}  [{:6s}]  {}{}{}".format(icon, t["id"], p, t["status"], t["title"], bl, pa)
 
 
 # --- Commands -----------------------------------------------------------------
@@ -328,11 +327,7 @@ def cmd_set(args):
     if args.json:
         print_json(task)
     else:
-        print(
-            "Updated {}: {}".format(
-                task_id, ", ".join(changes) if changes else "no changes"
-            )
-        )
+        print("Updated {}: {}".format(task_id, ", ".join(changes) if changes else "no changes"))
     return EXIT_OK
 
 
@@ -417,9 +412,7 @@ def cmd_next(args):
     cairn_root = find_cairn_root()
     tasks = list_tasks(cairn_root)
     blocked = compute_blocked_set(tasks)
-    ready = [
-        t for t in tasks if t["status"] in ("open", "active") and t["id"] not in blocked
-    ]
+    ready = [t for t in tasks if t["status"] in ("open", "active") and t["id"] not in blocked]
     ready.sort(key=lambda t: (t["priority"], t["created"]))
     handoff = latest_handoff(cairn_root)
     handoff_context = None
@@ -475,15 +468,11 @@ def cmd_land(args):
     done_ids = [
         t["id"]
         for t in tasks
-        if t["status"] == "done"
-        and t.get("log")
-        and t["log"][-1]["msg"].startswith("Done:")
+        if t["status"] == "done" and t.get("log") and t["log"][-1]["msg"].startswith("Done:")
     ]
     summary = args.summary or "Session ended - see active tasks for status."
     blocked = compute_blocked_set(tasks)
-    ready = [
-        t for t in tasks if t["status"] in ("open", "active") and t["id"] not in blocked
-    ]
+    ready = [t for t in tasks if t["status"] in ("open", "active") and t["id"] not in blocked]
     ready.sort(key=lambda t: (t["priority"], t["created"]))
     next_prompt = None
     if ready:
@@ -579,20 +568,14 @@ def build_parser():
 
     p = sub.add_parser("add", help="Create a new task")
     p.add_argument("title", help="Task title")
-    p.add_argument(
-        "--priority", "-p", type=int, default=2, choices=range(4), help="Priority 0-3"
-    )
-    p.add_argument(
-        "--type", "-t", default="task", choices=VALID_TYPES, help="Task type"
-    )
+    p.add_argument("--priority", "-p", type=int, default=2, choices=range(4), help="Priority 0-3")
+    p.add_argument("--type", "-t", default="task", choices=VALID_TYPES, help="Task type")
     p.add_argument("--parent", help="Parent task/epic ID")
     p.add_argument("--json", action="store_true", help="Output as JSON")
 
     p = sub.add_parser("list", help="List tasks with optional filters")
     p.add_argument("--status", "-s", choices=VALID_STATUSES, help="Filter by status")
-    p.add_argument(
-        "--priority", "-p", type=int, choices=range(4), help="Filter by priority"
-    )
+    p.add_argument("--priority", "-p", type=int, choices=range(4), help="Filter by priority")
     p.add_argument("--type", "-t", choices=VALID_TYPES, help="Filter by type")
     p.add_argument("--json", action="store_true", help="Output as JSON")
 
