@@ -8,7 +8,7 @@ structured memory across sessions.
 ## Install
 
 ```
-uv pip install -e .
+uv sync
 ```
 
 ## Quick Start
