@@ -7,34 +7,40 @@ structured memory across sessions. A lightweight alternative to Beads.
 
 ## Install
 
-    pip install -e .          # From source
-    chmod +x cairn.py         # Or use directly (zero dependencies)
+```
+pip install -e .          # From source
+chmod +x cairn.py         # Or use directly (zero dependencies)
+```
 
 ## Quick Start
 
-    cairn init
-    cairn add "Set up authentication" --priority 1
-    cairn add "Write login tests" --priority 2
-    cairn link c-a1b2 --blocks c-d4e5
-    cairn next --json
-    cairn set c-a1b2 --status active
-    cairn log c-a1b2 "JWT flow implemented"
-    cairn done c-a1b2 --reason "All tests passing"
-    cairn land --summary "Auth system done" --json
+```
+cairn init
+cairn add "Set up authentication" --priority 1
+cairn add "Write login tests" --priority 2
+cairn link c-a1b2 --blocks c-d4e5
+cairn next --json
+cairn set c-a1b2 --status active
+cairn log c-a1b2 "JWT flow implemented"
+cairn done c-a1b2 --reason "All tests passing"
+cairn land --summary "Auth system done" --json
+```
 
 ## Commands
 
-  init    - Create .cairn/ directory and AGENTS.md
-  add     - Create a new task
-  list    - List tasks with filters
-  show    - Display task details
-  set     - Update task fields
-  done    - Mark task complete
-  link    - Add a dependency
-  unlink  - Remove a dependency
-  next    - Show ready (unblocked) work
-  log     - Add a progress note
-  land    - Generate session handoff
+```
+init    - Create .cairn/ directory and AGENTS.md
+add     - Create a new task
+list    - List tasks with filters
+show    - Display task details
+set     - Update task fields
+done    - Mark task complete
+link    - Add a dependency
+unlink  - Remove a dependency
+next    - Show ready (unblocked) work
+log     - Add a progress note
+land    - Generate session handoff
+```
 
 Every command supports --json for structured agent output.
 
