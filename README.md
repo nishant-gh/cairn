@@ -1,15 +1,14 @@
 # Cairn
 
-A minimal AI agent memory system in under 1,000 lines of Python.
+A minimal AI agent memory system.
 
 Cairn gives AI coding agents (Claude Code, Cursor, Aider, etc.) persistent,
-structured memory across sessions. A lightweight alternative to Beads.
+structured memory across sessions.
 
 ## Install
 
 ```
-pip install -e .          # From source
-chmod +x cairn.py         # Or use directly (zero dependencies)
+uv pip install -e .
 ```
 
 ## Quick Start

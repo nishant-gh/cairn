@@ -2,7 +2,7 @@
 """Cairn - A minimal AI agent memory system.
 
 A lightweight, Git-backed task tracker and session memory for AI coding agents.
-~800 lines, zero dependencies beyond Python's stdlib.
+Zero dependencies beyond Python's stdlib.
 
 Usage:
     cairn init [--name NAME]
@@ -24,9 +24,10 @@ import sys
 import uuid
 from datetime import datetime
 from datetime import timezone
+from importlib.metadata import version
 from pathlib import Path
 
-__version__ = "0.1.0"
+__version__ = version("cairn-tasks")
 
 # --- Constants ----------------------------------------------------------------
 
@@ -69,6 +70,10 @@ def resolve_id(cairn_root, partial):
 # --- Storage Layer ------------------------------------------------------------
 
 
+class CairnError(Exception):
+    pass
+
+
 def find_cairn_root():
     current = Path.cwd()
     while True:
@@ -78,11 +83,7 @@ def find_cairn_root():
         if parent == current:
             break
         current = parent
-    print(
-        "Error: not a cairn project (no .cairn/ found). Run 'cairn init'.",
-        file=sys.stderr,
-    )
-    sys.exit(EXIT_ERROR)
+    raise CairnError("not a cairn project (no .cairn/ found). Run 'cairn init'.")
 
 
 def read_task(cairn_root, task_id):
@@ -465,11 +466,7 @@ def cmd_land(args):
     cairn_root = find_cairn_root()
     tasks = list_tasks(cairn_root)
     active = [t for t in tasks if t["status"] == "active"]
-    done_ids = [
-        t["id"]
-        for t in tasks
-        if t["status"] == "done" and t.get("log") and t["log"][-1]["msg"].startswith("Done:")
-    ]
+    done_ids = [t["id"] for t in tasks if t["status"] == "done"]
     summary = args.summary or "Session ended - see active tasks for status."
     blocked = compute_blocked_set(tasks)
     ready = [t for t in tasks if t["status"] in ("open", "active") and t["id"] not in blocked]
@@ -645,11 +642,14 @@ def main():
         parser.print_help()
         sys.exit(EXIT_USAGE)
     handler = COMMAND_MAP.get(args.command)
-    if handler:
-        sys.exit(handler(args))
-    else:
+    if not handler:
         parser.print_help()
         sys.exit(EXIT_USAGE)
+    try:
+        sys.exit(handler(args))
+    except CairnError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(EXIT_ERROR)
 
 
 if __name__ == "__main__":
