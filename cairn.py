@@ -44,6 +44,7 @@ EXIT_CONFLICT = 5
 
 # --- ID Generation and Resolution --------------------------------------------
 
+
 def generate_id():
     return "c-" + uuid.uuid4().hex[:6]
 
@@ -56,13 +57,16 @@ def resolve_id(cairn_root, partial):
         partial = "c-" + partial
     matches = [f.stem for f in tasks_dir.glob("c-*.json") if f.stem.startswith(partial)]
     if len(matches) == 0:
-        raise FileNotFoundError("No task matching '{}'".format(partial))
+        raise FileNotFoundError(f"No task matching '{partial}'")
     if len(matches) > 1:
-        raise ValueError("Ambiguous ID '{}': matches {}".format(partial, ", ".join(sorted(matches))))
+        raise ValueError(
+            "Ambiguous ID '{}': matches {}".format(partial, ", ".join(sorted(matches)))
+        )
     return matches[0]
 
 
 # --- Storage Layer ------------------------------------------------------------
+
 
 def find_cairn_root():
     current = Path.cwd()
@@ -73,15 +77,18 @@ def find_cairn_root():
         if parent == current:
             break
         current = parent
-    print("Error: not a cairn project (no .cairn/ found). Run 'cairn init'.", file=sys.stderr)
+    print(
+        "Error: not a cairn project (no .cairn/ found). Run 'cairn init'.",
+        file=sys.stderr,
+    )
     sys.exit(EXIT_ERROR)
 
 
 def read_task(cairn_root, task_id):
     path = cairn_root / TASKS_DIR / (task_id + ".json")
     if not path.exists():
-        raise FileNotFoundError("Task {} not found".format(task_id))
-    with open(path, "r") as f:
+        raise FileNotFoundError(f"Task {task_id} not found")
+    with open(path) as f:
         return json.load(f)
 
 
@@ -97,7 +104,7 @@ def list_tasks(cairn_root):
     tasks = []
     if tasks_dir.exists():
         for path in sorted(tasks_dir.glob("c-*.json")):
-            with open(path, "r") as f:
+            with open(path) as f:
                 tasks.append(json.load(f))
     return tasks
 
@@ -120,15 +127,16 @@ def latest_handoff(cairn_root):
     files = sorted(handoffs_dir.glob("*.json"))
     if not files:
         return None
-    with open(files[-1], "r") as f:
+    with open(files[-1]) as f:
         return json.load(f)
 
 
 # --- Dependency Graph ---------------------------------------------------------
 
+
 def compute_blocked_set(tasks):
     blocked = set()
-    done_ids = set(t["id"] for t in tasks if t["status"] == "done")
+    done_ids = {t["id"] for t in tasks if t["status"] == "done"}
     for t in tasks:
         if t["status"] != "done":
             for target_id in t.get("blocks", []):
@@ -157,6 +165,7 @@ def would_create_cycle(cairn_root, source_id, target_id):
 
 # --- Output Formatting --------------------------------------------------------
 
+
 def now_iso():
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
@@ -171,20 +180,27 @@ def format_task_row(t):
     p = "P" + str(t["priority"])
     bl = " blocks:" + ",".join(t["blocks"]) if t.get("blocks") else ""
     pa = " ^" + t["parent"] if t.get("parent") else ""
-    return "  {} {}  {}  [{:6s}]  {}{}{}".format(icon, t["id"], p, t["status"], t["title"], bl, pa)
+    return "  {} {}  {}  [{:6s}]  {}{}{}".format(
+        icon, t["id"], p, t["status"], t["title"], bl, pa
+    )
 
 
 # --- Commands -----------------------------------------------------------------
 
+
 def cmd_init(args):
     cairn_path = Path.cwd() / CAIRN_DIR
     if cairn_path.exists():
-        print("Cairn already initialized in {}".format(cairn_path))
+        print(f"Cairn already initialized in {cairn_path}")
         return EXIT_OK
     cairn_path.mkdir()
     (cairn_path / TASKS_DIR).mkdir()
     (cairn_path / HANDOFFS_DIR).mkdir()
-    config = {"name": args.name or Path.cwd().name, "version": __version__, "created": now_iso()}
+    config = {
+        "name": args.name or Path.cwd().name,
+        "version": __version__,
+        "created": now_iso(),
+    }
     with open(cairn_path / CONFIG_FILE, "w") as f:
         json.dump(config, f, indent=2)
         f.write("\n")
@@ -192,7 +208,7 @@ def cmd_init(args):
     if not agents_md.exists():
         agents_md.write_text(AGENTS_MD_TEMPLATE.format(name=config["name"]))
         print("Created AGENTS.md")
-    print("Initialized cairn project in {}".format(cairn_path))
+    print(f"Initialized cairn project in {cairn_path}")
     return EXIT_OK
 
 
@@ -204,19 +220,26 @@ def cmd_add(args):
         try:
             parent = resolve_id(cairn_root, args.parent)
         except (FileNotFoundError, ValueError) as e:
-            print("Error resolving parent: {}".format(e), file=sys.stderr)
+            print(f"Error resolving parent: {e}", file=sys.stderr)
             return EXIT_NOT_FOUND
     task = {
-        "id": task_id, "title": args.title, "status": "open",
-        "priority": args.priority, "type": args.type, "blocks": [],
-        "parent": parent, "created": now_iso(), "updated": now_iso(),
-        "notes": "", "log": [{"ts": now_iso(), "msg": "Created: " + args.title}],
+        "id": task_id,
+        "title": args.title,
+        "status": "open",
+        "priority": args.priority,
+        "type": args.type,
+        "blocks": [],
+        "parent": parent,
+        "created": now_iso(),
+        "updated": now_iso(),
+        "notes": "",
+        "log": [{"ts": now_iso(), "msg": "Created: " + args.title}],
     }
     write_task(cairn_root, task)
     if args.json:
         print_json(task)
     else:
-        print("Created {}: {}".format(task_id, args.title))
+        print(f"Created {task_id}: {args.title}")
     return EXIT_OK
 
 
@@ -245,10 +268,10 @@ def cmd_show(args):
     try:
         task_id = resolve_id(cairn_root, args.id)
     except FileNotFoundError:
-        print("Error: no task matching '{}'".format(args.id), file=sys.stderr)
+        print(f"Error: no task matching '{args.id}'", file=sys.stderr)
         return EXIT_NOT_FOUND
     except ValueError as e:
-        print("Error: {}".format(e), file=sys.stderr)
+        print(f"Error: {e}", file=sys.stderr)
         return EXIT_CONFLICT
     task = read_task(cairn_root, task_id)
     if args.json:
@@ -279,10 +302,10 @@ def cmd_set(args):
     try:
         task_id = resolve_id(cairn_root, args.id)
     except FileNotFoundError:
-        print("Error: no task matching '{}'".format(args.id), file=sys.stderr)
+        print(f"Error: no task matching '{args.id}'", file=sys.stderr)
         return EXIT_NOT_FOUND
     except ValueError as e:
-        print("Error: {}".format(e), file=sys.stderr)
+        print(f"Error: {e}", file=sys.stderr)
         return EXIT_CONFLICT
     task = read_task(cairn_root, task_id)
     changes = []
@@ -305,7 +328,11 @@ def cmd_set(args):
     if args.json:
         print_json(task)
     else:
-        print("Updated {}: {}".format(task_id, ", ".join(changes) if changes else "no changes"))
+        print(
+            "Updated {}: {}".format(
+                task_id, ", ".join(changes) if changes else "no changes"
+            )
+        )
     return EXIT_OK
 
 
@@ -314,10 +341,10 @@ def cmd_done(args):
     try:
         task_id = resolve_id(cairn_root, args.id)
     except FileNotFoundError:
-        print("Error: no task matching '{}'".format(args.id), file=sys.stderr)
+        print(f"Error: no task matching '{args.id}'", file=sys.stderr)
         return EXIT_NOT_FOUND
     except ValueError as e:
-        print("Error: {}".format(e), file=sys.stderr)
+        print(f"Error: {e}", file=sys.stderr)
         return EXIT_CONFLICT
     task = read_task(cairn_root, task_id)
     task["status"] = "done"
@@ -338,10 +365,10 @@ def cmd_link(args):
         source_id = resolve_id(cairn_root, args.id)
         target_id = resolve_id(cairn_root, args.blocks)
     except FileNotFoundError as e:
-        print("Error: {}".format(e), file=sys.stderr)
+        print(f"Error: {e}", file=sys.stderr)
         return EXIT_NOT_FOUND
     except ValueError as e:
-        print("Error: {}".format(e), file=sys.stderr)
+        print(f"Error: {e}", file=sys.stderr)
         return EXIT_CONFLICT
     if source_id == target_id:
         print("Error: a task cannot block itself", file=sys.stderr)
@@ -358,7 +385,7 @@ def cmd_link(args):
     if args.json:
         print_json(source)
     else:
-        print("Linked: {} --blocks--> {}".format(source_id, target_id))
+        print(f"Linked: {source_id} --blocks--> {target_id}")
     return EXIT_OK
 
 
@@ -368,10 +395,10 @@ def cmd_unlink(args):
         source_id = resolve_id(cairn_root, args.id)
         target_id = resolve_id(cairn_root, args.blocks)
     except FileNotFoundError as e:
-        print("Error: {}".format(e), file=sys.stderr)
+        print(f"Error: {e}", file=sys.stderr)
         return EXIT_NOT_FOUND
     except ValueError as e:
-        print("Error: {}".format(e), file=sys.stderr)
+        print(f"Error: {e}", file=sys.stderr)
         return EXIT_CONFLICT
     source = read_task(cairn_root, source_id)
     if target_id in source["blocks"]:
@@ -382,7 +409,7 @@ def cmd_unlink(args):
     if args.json:
         print_json(source)
     else:
-        print("Unlinked: {} -/-> {}".format(source_id, target_id))
+        print(f"Unlinked: {source_id} -/-> {target_id}")
     return EXIT_OK
 
 
@@ -390,7 +417,9 @@ def cmd_next(args):
     cairn_root = find_cairn_root()
     tasks = list_tasks(cairn_root)
     blocked = compute_blocked_set(tasks)
-    ready = [t for t in tasks if t["status"] in ("open", "active") and t["id"] not in blocked]
+    ready = [
+        t for t in tasks if t["status"] in ("open", "active") and t["id"] not in blocked
+    ]
     ready.sort(key=lambda t: (t["priority"], t["created"]))
     handoff = latest_handoff(cairn_root)
     handoff_context = None
@@ -399,7 +428,13 @@ def cmd_next(args):
         if top["id"] in handoff.get("still_active", []):
             handoff_context = handoff.get("next_prompt")
     if args.json:
-        print_json({"ready": ready, "blocked_ids": sorted(blocked), "handoff_context": handoff_context})
+        print_json(
+            {
+                "ready": ready,
+                "blocked_ids": sorted(blocked),
+                "handoff_context": handoff_context,
+            }
+        )
     else:
         if not ready:
             print("No ready tasks. All tasks are done or blocked.")
@@ -417,10 +452,10 @@ def cmd_log(args):
     try:
         task_id = resolve_id(cairn_root, args.id)
     except FileNotFoundError:
-        print("Error: no task matching '{}'".format(args.id), file=sys.stderr)
+        print(f"Error: no task matching '{args.id}'", file=sys.stderr)
         return EXIT_NOT_FOUND
     except ValueError as e:
-        print("Error: {}".format(e), file=sys.stderr)
+        print(f"Error: {e}", file=sys.stderr)
         return EXIT_CONFLICT
     task = read_task(cairn_root, task_id)
     task["log"].append({"ts": now_iso(), "msg": args.message})
@@ -429,7 +464,7 @@ def cmd_log(args):
     if args.json:
         print_json(task)
     else:
-        print("Logged to {}".format(task_id))
+        print(f"Logged to {task_id}")
     return EXIT_OK
 
 
@@ -437,39 +472,47 @@ def cmd_land(args):
     cairn_root = find_cairn_root()
     tasks = list_tasks(cairn_root)
     active = [t for t in tasks if t["status"] == "active"]
-    done_ids = []
-    for t in tasks:
-        if t["status"] == "done" and t.get("log"):
-            if t["log"][-1]["msg"].startswith("Done:"):
-                done_ids.append(t["id"])
+    done_ids = [
+        t["id"]
+        for t in tasks
+        if t["status"] == "done"
+        and t.get("log")
+        and t["log"][-1]["msg"].startswith("Done:")
+    ]
     summary = args.summary or "Session ended - see active tasks for status."
     blocked = compute_blocked_set(tasks)
-    ready = [t for t in tasks if t["status"] in ("open", "active") and t["id"] not in blocked]
+    ready = [
+        t for t in tasks if t["status"] in ("open", "active") and t["id"] not in blocked
+    ]
     ready.sort(key=lambda t: (t["priority"], t["created"]))
     next_prompt = None
     if ready:
         top = ready[0]
         last_msg = top["log"][-1]["msg"] if top.get("log") else ""
         next_prompt = "Continue work on {}: {} (P{}, {}). Last progress: {}".format(
-            top["id"], top["title"], top["priority"], top["status"], last_msg)
+            top["id"], top["title"], top["priority"], top["status"], last_msg
+        )
     handoff = {
-        "timestamp": now_iso(), "summary": summary, "completed": done_ids,
+        "timestamp": now_iso(),
+        "summary": summary,
+        "completed": done_ids,
         "still_active": [t["id"] for t in active],
         "open_remaining": [t["id"] for t in ready if t["status"] == "open"],
-        "blocked": sorted(blocked), "next_prompt": next_prompt,
+        "blocked": sorted(blocked),
+        "next_prompt": next_prompt,
     }
     path = write_handoff(cairn_root, handoff)
     if args.json:
         print_json(handoff)
     else:
-        print("Session handoff saved to {}".format(path.name))
-        print("\n  Summary: {}".format(summary))
+        print(f"Session handoff saved to {path.name}")
+        print(f"\n  Summary: {summary}")
         if active:
             print("  Active:  {}".format(", ".join(t["id"] for t in active)))
         if done_ids:
             print("  Done:    {}".format(", ".join(done_ids)))
         if next_prompt:
-            print("\n  Next session prompt:\n  {}".format(next_prompt))
+            print(f"\n  Next session prompt:\n  {next_prompt}")
     return EXIT_OK
 
 
@@ -523,8 +566,11 @@ You can use partial IDs: `cairn show c-a1` resolves to `c-a1b2c3` if unambiguous
 
 # --- CLI Parser ---------------------------------------------------------------
 
+
 def build_parser():
-    parser = argparse.ArgumentParser(prog="cairn", description="Cairn - A minimal AI agent memory system")
+    parser = argparse.ArgumentParser(
+        prog="cairn", description="Cairn - A minimal AI agent memory system"
+    )
     parser.add_argument("--version", action="version", version="cairn " + __version__)
     sub = parser.add_subparsers(dest="command", help="Available commands")
 
@@ -533,14 +579,20 @@ def build_parser():
 
     p = sub.add_parser("add", help="Create a new task")
     p.add_argument("title", help="Task title")
-    p.add_argument("--priority", "-p", type=int, default=2, choices=range(4), help="Priority 0-3")
-    p.add_argument("--type", "-t", default="task", choices=VALID_TYPES, help="Task type")
+    p.add_argument(
+        "--priority", "-p", type=int, default=2, choices=range(4), help="Priority 0-3"
+    )
+    p.add_argument(
+        "--type", "-t", default="task", choices=VALID_TYPES, help="Task type"
+    )
     p.add_argument("--parent", help="Parent task/epic ID")
     p.add_argument("--json", action="store_true", help="Output as JSON")
 
     p = sub.add_parser("list", help="List tasks with optional filters")
     p.add_argument("--status", "-s", choices=VALID_STATUSES, help="Filter by status")
-    p.add_argument("--priority", "-p", type=int, choices=range(4), help="Filter by priority")
+    p.add_argument(
+        "--priority", "-p", type=int, choices=range(4), help="Filter by priority"
+    )
     p.add_argument("--type", "-t", choices=VALID_TYPES, help="Filter by type")
     p.add_argument("--json", action="store_true", help="Output as JSON")
 
@@ -589,9 +641,17 @@ def build_parser():
 # --- Main ---------------------------------------------------------------------
 
 COMMAND_MAP = {
-    "init": cmd_init, "add": cmd_add, "list": cmd_list, "show": cmd_show,
-    "set": cmd_set, "done": cmd_done, "link": cmd_link, "unlink": cmd_unlink,
-    "next": cmd_next, "log": cmd_log, "land": cmd_land,
+    "init": cmd_init,
+    "add": cmd_add,
+    "list": cmd_list,
+    "show": cmd_show,
+    "set": cmd_set,
+    "done": cmd_done,
+    "link": cmd_link,
+    "unlink": cmd_unlink,
+    "next": cmd_next,
+    "log": cmd_log,
+    "land": cmd_land,
 }
 
 
